@@ -1,15 +1,15 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\OUT-Malkov-FA\\Desktop\\HomeWork3\\TmpTest\\HW3(5).csproj": {}
+    "C:\\Users\\OUT-Malkov-FA\\Desktop\\HomeWork3\\TmpTest\\HomeWork3.csproj": {}
   },
   "projects": {
-    "C:\\Users\\OUT-Malkov-FA\\Desktop\\HomeWork3\\TmpTest\\HW3(5).csproj": {
+    "C:\\Users\\OUT-Malkov-FA\\Desktop\\HomeWork3\\TmpTest\\HomeWork3.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\OUT-Malkov-FA\\Desktop\\HomeWork3\\TmpTest\\HW3(5).csproj",
-        "projectName": "HW3(5)",
-        "projectPath": "C:\\Users\\OUT-Malkov-FA\\Desktop\\HomeWork3\\TmpTest\\HW3(5).csproj",
+        "projectUniqueName": "C:\\Users\\OUT-Malkov-FA\\Desktop\\HomeWork3\\TmpTest\\HomeWork3.csproj",
+        "projectName": "HomeWork3",
+        "projectPath": "C:\\Users\\OUT-Malkov-FA\\Desktop\\HomeWork3\\TmpTest\\HomeWork3.csproj",
         "packagesPath": "C:\\Users\\OUT-Malkov-FA\\.nuget\\packages\\",
         "outputPath": "C:\\Users\\OUT-Malkov-FA\\Desktop\\HomeWork3\\TmpTest\\obj\\",
         "projectStyle": "PackageReference",

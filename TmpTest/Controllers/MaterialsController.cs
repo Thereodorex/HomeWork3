@@ -6,9 +6,11 @@ using Microsoft.AspNetCore.Mvc;
 using TmpTest.Repositories;
 using TmpTest.Models;
 using TmpTest.DataContext;
-using TmpTest.DTModels;
+using TmpTest.DTO;
 using Newtonsoft.Json.Linq;
 using System.Text.Json;
+using Microsoft.AspNetCore.Http;
+using System.IO;
 //using Newtonsoft.Json;
 
 
@@ -20,90 +22,118 @@ namespace TmpTest.Controllers
     [ApiController]
     public class MaterialsController : ControllerBase
     {
-        private CategoriesRep categoriesRep;
-        private MaterialsRep materialsRep;
-        private FilesRep filesRep;
         private MaterialsDBContext _context;
+        private MaterialsRep _materialsRep;
+        private FilesRep _filesRep;
 
         public MaterialsController(MaterialsDBContext context)
         {
             _context = context;
-            categoriesRep = new CategoriesRep(context);
-            materialsRep = new MaterialsRep(context);
-            filesRep = new FilesRep(context);
+            _materialsRep = new MaterialsRep(context);
+            _filesRep = new FilesRep(context);
         }
 
         [HttpGet("categories")]
         public IEnumerable<CategoryModel> GetCategories()
         {
-            var categories = categoriesRep.GetAll();
-            return categories;
+            return _context.Categories.ToList();
+        }
+
+        [HttpGet("categories/{id}")]
+        public IEnumerable<MaterialModel> GetMaterialsByCateogory(int id)
+        {
+            return _context.Materials.Where(m => m.CategoryId == id).ToList();
         }
 
         // GET: api/<MaterialsController>
         [HttpGet]
         public IEnumerable<MaterialModel> Get()
         {
-            return materialsRep.GetAll();
+            return _context.Materials.ToList();
         }
 
         // GET api/<MaterialsController>/5
         [HttpGet("{id}")]
         public MaterialModel Get(int id)
         {
-            return materialsRep.GetById(id);
+            return _context.Materials.Where(m => m.MaterialId == id).FirstOrDefault();
         }
 
         [HttpGet("{id}/files")]
         public IEnumerable<FileModel> GetMaterialFiles(int id)
         {
             //return filesRep.GetAll().Where(f => f.MaterialId == id).ToList();
-            return filesRep.GetByMaterialId(id);
+            return _context.Files.Where(f => f.MaterialId == id).ToList();
         }
 
-        [HttpGet("{id}/files/download")]
-        public DownloadFileModel GetLastVersion(int id)
+        [HttpGet("{id}/files/{version}")]
+        public GetFileInfoDTO GetFileInfo(int id, int version)
         {
-            List<FileModel> files = filesRep.GetAll().Where(f => f.MaterialId == id).ToList();
-            int max = files.Max(f => f.Version);
-            return GetVersion(id, files.First(f => f.Version == max).Version);
-        }
-
-        [HttpGet("{id}/files/download/{version}")]
-        public DownloadFileModel GetVersion(int id, int version)
-        {
-            DownloadFileModel model = new DownloadFileModel();
-            List<FileModel> files = filesRep.GetAll().Where(f => f.MaterialId == id).ToList();
+            GetFileInfoDTO model = new GetFileInfoDTO();
+            List<FileModel> files = _context.Files.Where(f => f.MaterialId == id).ToList();
             if (files.Count == 0) return null;
             FileModel file = files.First(f => f.Version == version);
-            string content = filesRep.GetContent(file.FileId);
-            model.MaterialName = materialsRep.GetById(file.MaterialId).Name;
+            model.MaterialName = _context.Materials.Where(m => m.MaterialId == id).FirstOrDefault().Name;
             model.FileName = file.Name;
             model.Version = file.Version;
-            model.Content = content;
+            model.Id = file.FileId;
+            model.FileSize = file.Size;
             return model;
         }
 
-        [HttpGet("{id}/changeCategory/{categoryId}")]
-        public void ChangeCategory(int id, int categoryId)
+        [HttpGet("{id}/files/last")]
+        public int GetLastFileInfo(int id)
         {
-            materialsRep.ChangeCategory(id, categoryId);
+            int version = _context.Files.Where(f => f.MaterialId == id).Max(f => f.Version);
+            return version;
+            //return GetFileInfo(id, version);
         }
 
-        //[HttpGet("{id}/update/{name}_{size}")]
-        [HttpPost("{id}/update")]
-        public string UpdateMaterial(int id, [FromBody] UpdateMaterialModel content)
+        [HttpGet("{id}/files/{version}/download")]
+        public async Task<IActionResult> DownloadFile(int id, int version)
+        {
+            GetFileInfoDTO model = new GetFileInfoDTO();
+            List<FileModel> files = _context.Files.Where(f => f.MaterialId == id).ToList();
+            if (files.Count == 0) return null;
+            FileModel file = files.First(f => f.Version == version);
+            Stream stream = System.IO.File.OpenRead(@$"{file.Path}");
+            return File(stream, "application/octet-stream", file.Name);
+        }
+
+        [HttpGet("{id}/files/last/download")]
+        public async Task<IActionResult> DownloadLastVersion(int id)
+        {
+            int version = _context.Files.Where(f => f.MaterialId == id).Max(f => f.Version);
+            return await DownloadFile(id, version);
+        }
+
+
+        [HttpPost("{id}/changeCategory")]
+        public void ChangeCategory(int id, [FromForm] int categoryId)
+        {
+            MaterialModel material = _context.Materials.Where(m => m.MaterialId == id).FirstOrDefault();
+            material.CategoryId = categoryId;
+            _context.SaveChanges();
+        }
+
+        [HttpPost("new")]
+        public string NewMaterial([FromForm] NewMaterialDTO fileInfo, [FromForm]IFormFile file)
         {
             try
             {
-                string name = content.FileName;
-                int materialId = id;
-                ulong size = content.Size;
-                string data = content.Content;
-                int version = filesRep.GetByMaterialId(materialId).Count + 1;
-                if (version == 1)
-                    return $"Material with id {materialId} does not exist";
-                filesRep.Append(materialId, version, size, name, data);
+                //dynamic JSONstring = JObject.Parse(body.ToString());
+                //NewMaterialModel content = JsonSerializer.Deserialize<NewMaterialModel>(JSONstring);
+                string name = fileInfo.FileName;
+                int categoryId = fileInfo.CategoryId;
+                ulong size = (ulong)file.Length;
+                int version = 1;
+                MaterialModel material = _materialsRep.Append(name, categoryId);
+                FileModel fileModel = _filesRep.Append(material.MaterialId, version, size, name);
+                using (var fileStream = new FileStream($"Files\\{material.MaterialId}-{fileModel.FileId}", FileMode.Create))
+                {
+                    file.CopyToAsync(fileStream);
+                }
+
                 return "Ok";
             }
             catch (Exception e)
@@ -112,29 +142,25 @@ namespace TmpTest.Controllers
             }
         }
 
-        /*[HttpPost("new/{categoryId}_{materialName}_{fileName}_{size}")]
-        public void NewMaterial(int categoryId, string materialName, string fileName, ulong size)
+        [HttpPost("update")]
+        public string UpdateMaterial([FromForm] UpdateMaterialDTO fileInfo, [FromForm] IFormFile file)
         {
-            int version = 1;
-            MaterialModel material = materialsRep.Append(materialName, categoryId);
-            filesRep.Append(material.MaterialId, version, size, fileName);
-        }*/
-
-        [HttpPost("new")]
-        public string NewMaterial([FromBody] NewMaterialModel content)
-        {
+            int id = 1;
             try
             {
                 //dynamic JSONstring = JObject.Parse(body.ToString());
                 //NewMaterialModel content = JsonSerializer.Deserialize<NewMaterialModel>(JSONstring);
-                string name = content.FileName;
-                int categoryId = content.CategoryId;
-                ulong size = content.Size;
-                int version = 1;
-                string data = content.Content;
-                MaterialModel material = materialsRep.Append(name, categoryId);
-                filesRep.Append(material.MaterialId, version, size, name, data);
-                return "Ok";
+                string name = fileInfo.FileName;
+                ulong size = (ulong)file.Length;
+                MaterialModel material = _context.Materials.Where(m => m.MaterialId == id).FirstOrDefault();
+                int version = _context.Files.Where(f => f.MaterialId == id).Max(f => f.Version) + 1;
+                FileModel fileModel = _filesRep.Append(material.MaterialId, version, size, name);
+                using (var fileStream = new FileStream($"Files\\{material.MaterialId}-{fileModel.FileId}", FileMode.Create))
+                {
+                    file.CopyToAsync(fileStream);
+                }
+
+                return fileInfo.FileName;
             }
             catch (Exception e)
             {
