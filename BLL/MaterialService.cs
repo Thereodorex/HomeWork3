@@ -59,7 +59,7 @@ namespace BLL
         {
             string name = data.FileName;
             string category = data.Category;
-            ulong size = (ulong)data.fileBlob.Length;
+            ulong size = (ulong)data.FileBlob.Length;
             int version = 1;
             MaterialModel material = new MaterialModel();
             material.Name = name;
@@ -75,7 +75,7 @@ namespace BLL
             file.Version = version;
             file.Size = size;
             file.Id = _context.Files.Count() > 0 ? _context.Files.Max(f => f.Id) + 1 : 1;
-            file.Path = _fileService.UploadFile(material, file, data.fileBlob);
+            file.Path = _fileService.UploadFile(material, file, data.FileBlob);
             file.UploadTime = DateTime.Now;
             _context.Add(file);
             _context.SaveChanges();
@@ -88,9 +88,9 @@ namespace BLL
             FileModel file = new FileModel();
             file.MaterialId = material.Id;
             file.Version = _context.Files.Where(f => f.MaterialId == material.Id).Max(f => f.Version) + 1;
-            file.Size = (ulong)data.fileBlob.Length;
+            file.Size = (ulong)data.FileBlob.Length;
             file.Id = _context.Files.Count() > 0 ? _context.Files.Max(f => f.Id) + 1 : 1;
-            file.Path = _fileService.UploadFile(material, file, data.fileBlob);
+            file.Path = _fileService.UploadFile(material, file, data.FileBlob);
             file.UploadTime = DateTime.Now;
             _context.Add(file);
             _context.SaveChanges();

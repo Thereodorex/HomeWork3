@@ -9,6 +9,6 @@ namespace BLL.DTOs
     public class UpdateMaterialDTO
     {
         public int MaterialId { get; set; }
-        public byte[] fileBlob { get; set; }
+        public byte[] FileBlob { get; set; }
     }
 }

@@ -92,7 +92,7 @@ namespace Layers.Controllers
                     file.CopyTo(stream);
                     bytes = stream.ToArray();
                 }
-                fileInfo.fileBlob = bytes;
+                fileInfo.FileBlob = bytes;
                 _materialService.CreateMaterial(fileInfo);
 
                 return "Ok";
@@ -114,7 +114,7 @@ namespace Layers.Controllers
                     file.CopyTo(stream);
                     bytes = stream.ToArray();
                 }
-                fileInfo.fileBlob = bytes;
+                fileInfo.FileBlob = bytes;
                 _materialService.UpdateMaterial(fileInfo);
 
                 return "Ok";

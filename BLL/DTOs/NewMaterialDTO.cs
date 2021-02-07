@@ -11,6 +11,6 @@ namespace BLL.DTOs
         public string MaterialName { get; set; }
         public string FileName { get; set; }
         public string Category { get; set; }
-        public byte[] fileBlob { get; set; }
+        public byte[] FileBlob { get; set; }
     }
 }
